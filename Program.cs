@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Drawing.Drawing2D;
 
 namespace ConsoleSpiderSolitare
 {
@@ -25,22 +26,34 @@ namespace ConsoleSpiderSolitare
         }
         static void InitialSetup(CardContainer[] board, CardContainer[] stock)
         {
-            for (int i = 0; i < 10; i++) board[i] = new CardContainer();
-            for (int i = 0; i < 4; i++) stock[i] = new CardContainer();
+            for(int i = 0; i < 10; i++) board[i] = new CardContainer();
+            for(int i = 0; i < 4; i++) stock[i] = new CardContainer();
             Console.OutputEncoding = Encoding.UTF8;
-            Console.Clear();
             Console.CursorVisible = false;
             Console.BackgroundColor = ConsoleColor.DarkGreen;
             ConsoleHelper.SetCurrentFont("Consolas", 30);
             Console.SetWindowSize(40, 19);
+            Console.Clear();
         }
         static void PlayGame(CardContainer[] board, CardContainer[] stock)
         {
+            Mouse m = new Mouse();
+            Coor curSelect = new Coor(-1, -1);
+            DrawBoard(board, stock, curSelect);
             while(true)
             {
+                if(Control.MouseButtons.ToString() == "Left")
+                {
+                    curSelect = m.GetCursorCoor();
+                    DrawBoard(board, stock, curSelect);
+                }
 
-                DrawBoard(board, stock);
-                Thread.Sleep(150);
+                Point p = m.GetCursorPos();
+                Console.SetCursorPosition(0, 8);
+                Console.WriteLine(p + "   ");
+                Console.WriteLine(Control.MouseButtons + "   ");
+                
+                Thread.Sleep(50);
             }
         }
         static void ShuffleDecks(CardContainer[] board, CardContainer[] stock)
@@ -48,41 +61,41 @@ namespace ConsoleSpiderSolitare
             Random rand = new Random();
             List<int> randomCards = new List<int>();
 
-            while (randomCards.Count() < 52 * 2)
+            while(randomCards.Count() < 52 * 2)
             {
                 int x = rand.Next(1, 13 * 8 + 1);
-                if (!randomCards.Contains(x))
+                if(!randomCards.Contains(x))
                 {
                     randomCards.Add(x);
                 }
             }
-            for (int i = 0; i < 4; i++)
+            for(int i = 0; i < 4; i++)
             {
-                for (int y = 1; y <= 6; y++)
+                for(int y = 1; y <= 6; y++)
                 {
                     int c = randomCards.Last();
                     randomCards.Remove(randomCards.Last());
                     Card t;
-                    if (y == 6) t = new Card((c / 13) % 4, c % 13, false);
+                    if(y == 6) t = new Card((c / 13) % 4, c % 13, false);
                     else t = new Card((c / 13) % 4, c % 13, true);
                     board[i].AddCards(t);
                 }
             }
-            for (int i = 4; i < 10; i++)
+            for(int i = 4; i < 10; i++)
             {
-                for (int y = 1; y <= 5; y++)
+                for(int y = 1; y <= 5; y++)
                 {
                     int c = randomCards.Last();
                     randomCards.Remove(randomCards.Last());
                     Card t;
-                    if (y == 5) t = new Card((c / 13) % 4, c % 13, false);
+                    if(y == 5) t = new Card((c / 13) % 4, c % 13, false);
                     else t = new Card((c / 13) % 4, c % 13, true);
                     board[i].AddCards(t);
                 }
             }
-            for (int i = 0; i < 4; i++)
+            for(int i = 0; i < 4; i++)
             {
-                for (int y = 1; y <= 10; y++)
+                for(int y = 1; y <= 10; y++)
                 {
                     int c = randomCards.Last();
                     randomCards.Remove(randomCards.Last());
@@ -92,43 +105,36 @@ namespace ConsoleSpiderSolitare
             }
 
         }
-
-        protected static int origCol;
-        protected static int origRow;
-        static void DrawBoard(CardContainer[] board, CardContainer[] stock)
+        static void DrawBoard(CardContainer[] board, CardContainer[] stock, Coor curSelect)
         {
             Console.Clear();
-            int x = origCol;
-            int y = origRow;
+            Coor brush = new Coor(0, 0);
             for(int i = 0; i < 10; i++)
             {
-                for (int j = 0; j < board[i].GetCount(); j++)
+                for(int j = 0; j < board[i].GetCount(); j++)
                 {
-                    Console.SetCursorPosition(x, y);
+                    Console.BackgroundColor = ConsoleColor.DarkGreen;
+                    Console.SetCursorPosition(brush.Col, brush.Row);
                     int rank = board[i].GetCardAtIndex(j).getRank();
                     int suit = board[i].GetCardAtIndex(j).getSuit();
                     bool hidden = board[i].GetCardAtIndex(j).isHidden();
-                    if (hidden)
+                    if(hidden)
                     {
                         Console.ForegroundColor = ConsoleColor.White;
                         Console.Write("▓▓▓");
                     }
                     else
                     {
+                        if (j == curSelect.Row && i == curSelect.Col) Console.BackgroundColor = ConsoleColor.DarkCyan;
                         if (suit == 0 || suit == 1) Console.ForegroundColor = ConsoleColor.Red;
                         else Console.ForegroundColor = Console.ForegroundColor = ConsoleColor.White;
                         Console.Write($"{Carddeck.ranks[rank],2}{Carddeck.suits[suit]}");
                     }
-                    y++;
+                    brush.Row++;
                 }
-                x += 4;
-                y = origRow;
+                brush.Col += 4;
+                brush.Row = 0;
             }
-            Console.SetCursorPosition(0, 8);
-            Mouse m = new Mouse();
-            Point p = m.GetCursorPos();
-            Console.WriteLine(p);
-            //Console.Clear();
         }
     }
     public class Mouse
@@ -159,6 +165,20 @@ namespace ConsoleSpiderSolitare
                 mousePos.Y -= 30;
             }
             return new Point(mousePos.X - consoleRect.Left, mousePos.Y - consoleRect.Top);
+        }
+        public Coor GetCursorCoor() 
+        {
+            mousePos = GetCursorPos();
+            return new Coor(mousePos.X / 56, mousePos.Y / 30);
+        }
+    }
+    public class Coor
+    {
+        public int Row, Col;
+        public Coor(int Col, int Row)
+        {
+            this.Row = Row;
+            this.Col = Col;
         }
     }
     public class Carddeck
@@ -195,7 +215,7 @@ namespace ConsoleSpiderSolitare
         public void AddCards(Card a) { cards[count++] = a; }
         public void AddCards(Card[] a)
         {
-            for (int i = 0; i < a.Count(); i++)
+            for(int i = 0; i < a.Count(); i++)
             {
                 cards[count++] = a[i];
             }
