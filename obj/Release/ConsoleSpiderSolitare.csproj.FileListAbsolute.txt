@@ -1,0 +1,8 @@
+C:\Users\Martynas\Desktop\MEGA Programming\ConsoleSpiderSolitare\bin\Release\ConsoleSpiderSolitare.exe.config
+C:\Users\Martynas\Desktop\MEGA Programming\ConsoleSpiderSolitare\bin\Release\ConsoleSpiderSolitare.exe
+C:\Users\Martynas\Desktop\MEGA Programming\ConsoleSpiderSolitare\bin\Release\ConsoleSpiderSolitare.pdb
+C:\Users\Martynas\Desktop\MEGA Programming\ConsoleSpiderSolitare\obj\Release\ConsoleSpiderSolitare.csproj.AssemblyReference.cache
+C:\Users\Martynas\Desktop\MEGA Programming\ConsoleSpiderSolitare\obj\Release\ConsoleSpiderSolitare.csproj.SuggestedBindingRedirects.cache
+C:\Users\Martynas\Desktop\MEGA Programming\ConsoleSpiderSolitare\obj\Release\ConsoleSpiderSolitare.csproj.CoreCompileInputs.cache
+C:\Users\Martynas\Desktop\MEGA Programming\ConsoleSpiderSolitare\obj\Release\ConsoleSpiderSolitare.exe
+C:\Users\Martynas\Desktop\MEGA Programming\ConsoleSpiderSolitare\obj\Release\ConsoleSpiderSolitare.pdb
