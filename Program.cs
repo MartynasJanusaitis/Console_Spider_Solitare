@@ -1,16 +1,13 @@
 ﻿using System;
+using System.CodeDom.Compiler;
+using System.Collections;
 using System.Collections.Generic;
-using System.Data;
+using System.Drawing;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
-using System.Security.Cryptography;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Drawing;
-using System.Runtime.InteropServices;
-using System.Drawing.Drawing2D;
 
 namespace ConsoleSpiderSolitare
 {
@@ -18,16 +15,13 @@ namespace ConsoleSpiderSolitare
     {
         static void Main(string[] args)
         {
-            CardContainer[] board = new CardContainer[10];
-            CardContainer[] stock = new CardContainer[4];
-            InitialSetup(board, stock);
-            ShuffleDecks(board, stock);
-            PlayGame(board, stock);
+            GameEngine g = new GameEngine();
+
+            InitialSetup();
+            PlayGame(g);
         }
-        static void InitialSetup(CardContainer[] board, CardContainer[] stock)
+        static void InitialSetup()
         {
-            for(int i = 0; i < 10; i++) board[i] = new CardContainer();
-            for(int i = 0; i < 4; i++) stock[i] = new CardContainer();
             Console.OutputEncoding = Encoding.UTF8;
             Console.CursorVisible = false;
             Console.BackgroundColor = ConsoleColor.DarkGreen;
@@ -35,105 +29,44 @@ namespace ConsoleSpiderSolitare
             Console.SetWindowSize(40, 19);
             Console.Clear();
         }
-        static void PlayGame(CardContainer[] board, CardContainer[] stock)
+        static void PlayGame(GameEngine g)
         {
             Mouse m = new Mouse();
-            Coor curSelect = new Coor(-1, -1);
-            DrawBoard(board, stock, curSelect);
-            while(true)
+            
+            Coor emptyCoor = new Coor(-1, -1);
+            Coor curSelect = emptyCoor;
+            Coor firstSelect = emptyCoor;
+            Coor secondSelect = emptyCoor;
+            g.DrawBoard(curSelect);
+            while (true)
             {
-                if(Control.MouseButtons.ToString() == "Left")
+                if (Control.MouseButtons.ToString() == "Left")
                 {
                     curSelect = m.GetCursorCoor();
-                    DrawBoard(board, stock, curSelect);
-                }
-
-                Point p = m.GetCursorPos();
-                Console.SetCursorPosition(0, 8);
-                Console.WriteLine(p + "   ");
-                Console.WriteLine(Control.MouseButtons + "   ");
-                
-                Thread.Sleep(50);
-            }
-        }
-        static void ShuffleDecks(CardContainer[] board, CardContainer[] stock)
-        {
-            Random rand = new Random();
-            List<int> randomCards = new List<int>();
-
-            while(randomCards.Count() < 52 * 2)
-            {
-                int x = rand.Next(1, 13 * 8 + 1);
-                if(!randomCards.Contains(x))
-                {
-                    randomCards.Add(x);
-                }
-            }
-            for(int i = 0; i < 4; i++)
-            {
-                for(int y = 1; y <= 6; y++)
-                {
-                    int c = randomCards.Last();
-                    randomCards.Remove(randomCards.Last());
-                    Card t;
-                    if(y == 6) t = new Card((c / 13) % 4, c % 13, false);
-                    else t = new Card((c / 13) % 4, c % 13, true);
-                    board[i].AddCards(t);
-                }
-            }
-            for(int i = 4; i < 10; i++)
-            {
-                for(int y = 1; y <= 5; y++)
-                {
-                    int c = randomCards.Last();
-                    randomCards.Remove(randomCards.Last());
-                    Card t;
-                    if(y == 5) t = new Card((c / 13) % 4, c % 13, false);
-                    else t = new Card((c / 13) % 4, c % 13, true);
-                    board[i].AddCards(t);
-                }
-            }
-            for(int i = 0; i < 4; i++)
-            {
-                for(int y = 1; y <= 10; y++)
-                {
-                    int c = randomCards.Last();
-                    randomCards.Remove(randomCards.Last());
-                    Card t = new Card((c / 13) % 4, c % 13, false);
-                    stock[i].AddCards(t);
-                }
-            }
-
-        }
-        static void DrawBoard(CardContainer[] board, CardContainer[] stock, Coor curSelect)
-        {
-            Console.Clear();
-            Coor brush = new Coor(0, 0);
-            for(int i = 0; i < 10; i++)
-            {
-                for(int j = 0; j < board[i].GetCount(); j++)
-                {
-                    Console.BackgroundColor = ConsoleColor.DarkGreen;
-                    Console.SetCursorPosition(brush.Col, brush.Row);
-                    int rank = board[i].GetCardAtIndex(j).getRank();
-                    int suit = board[i].GetCardAtIndex(j).getSuit();
-                    bool hidden = board[i].GetCardAtIndex(j).isHidden();
-                    if(hidden)
+                    if (g.ButtonPressed(curSelect)) {}
+                    else if (g.IsValidCardSelected(curSelect))
                     {
-                        Console.ForegroundColor = ConsoleColor.White;
-                        Console.Write("▓▓▓");
+                        if (firstSelect == emptyCoor && secondSelect == emptyCoor)
+                        {
+                            firstSelect = curSelect;
+                        }
+                        else if (firstSelect != emptyCoor && firstSelect != curSelect && secondSelect == emptyCoor)
+                        {
+                            secondSelect = curSelect;
+                        }
+                        if (firstSelect != emptyCoor && secondSelect != emptyCoor)
+                        {
+                            Console.WriteLine(g.MoveCards(firstSelect, secondSelect));
+                            firstSelect = emptyCoor;
+                            secondSelect = emptyCoor;
+                        }
                     }
-                    else
-                    {
-                        if (j == curSelect.Row && i == curSelect.Col) Console.BackgroundColor = ConsoleColor.DarkCyan;
-                        if (suit == 0 || suit == 1) Console.ForegroundColor = ConsoleColor.Red;
-                        else Console.ForegroundColor = Console.ForegroundColor = ConsoleColor.White;
-                        Console.Write($"{Carddeck.ranks[rank],2}{Carddeck.suits[suit]}");
-                    }
-                    brush.Row++;
+                    else firstSelect = emptyCoor;
+                    g.DrawBoard(firstSelect);
+                    Thread.Sleep(120);
                 }
-                brush.Col += 4;
-                brush.Row = 0;
+
+                Thread.Sleep(10);
             }
         }
     }
@@ -159,14 +92,14 @@ namespace ConsoleSpiderSolitare
         {
             GetWindowRect(consoleWindow, out consoleRect);
             mousePos = Control.MousePosition;
-            if(titleBar)
+            if (titleBar)
             {
                 mousePos.X -= 8;
                 mousePos.Y -= 30;
             }
             return new Point(mousePos.X - consoleRect.Left, mousePos.Y - consoleRect.Top);
         }
-        public Coor GetCursorCoor() 
+        public Coor GetCursorCoor()
         {
             mousePos = GetCursorPos();
             return new Coor(mousePos.X / 56, mousePos.Y / 30);
@@ -184,22 +117,35 @@ namespace ConsoleSpiderSolitare
     public class Carddeck
     {
         public static string suits { get; } = "♥♦♣♠";
-        public static string[] ranks { get; } = new string[13] { "1", "2", "3", "4", "5", "6", "7", 
+        public static string[] ranks { get; } = new string[13] { "1", "2", "3", "4", "5", "6", "7",
                                                                 "8", "9", "10", "J", "Q", "K"};
     }
     class Card
     {
+        private int id;
         private int suit, rank;
         private bool hidden;
-        public Card(int suit, int rank, bool hidden)
+        public Card(int suit, int rank, bool hidden, int id)
         {
             this.suit = suit;
             this.rank = rank;
             this.hidden = hidden;
+            this.id = id;
         }
-        public int getSuit() { return suit; }
-        public int getRank() { return rank; }
-        public bool isHidden() { return hidden; }
+        public int GetSuit() { return suit; }
+        public int GetRank() { return rank; }
+        public bool IsHidden() { return hidden; }
+        public int GetId() { return id; }
+        public void Unhide() { hidden = false; }
+        public Card DeepCopy()
+        {
+            Card temp = (Card)this.MemberwiseClone() ;
+            temp.suit = this.suit;
+            temp.rank = this.rank;
+            temp.hidden = this.hidden;
+            temp.id = this.id;
+            return temp;
+        }
     }
     class CardContainer
     {
@@ -215,13 +161,209 @@ namespace ConsoleSpiderSolitare
         public void AddCards(Card a) { cards[count++] = a; }
         public void AddCards(Card[] a)
         {
-            for(int i = 0; i < a.Count(); i++)
+            for (int i = 0; i < a.Count(); i++)
             {
                 cards[count++] = a[i];
             }
         }
         public int GetCount() { return count; }
         public Card[] GetCards() { return cards; }
-        public Card GetCardAtIndex(int i) { return cards[i]; }
+        public Card GetCardAtIndex(int j) { return cards[j]; }
+        public Card[] GetCardsFromIndex(int j)
+        {
+            Card[] output = new Card[GetCountFromIndex(j)];
+            int c = 0;
+            for (int i = j; i < count; i++)
+            {
+                output[c++] = cards[i];
+            }
+            return output;
+        }
+        public int GetCountFromIndex(int j)
+        {
+            return count - j;
+        }
+        public void RemoveCardsFromIndex(int j)
+        {
+            for (int i = j; i < count; i++)
+            {
+                cards[i] = null;
+            }
+            count -= count - j;
+            if (count > 0 && cards[count - 1].IsHidden()) cards[count - 1].Unhide();
+        }
+        public Card GetLastCard() { return cards[count - 1]; }
+        public CardContainer DeepCopy()
+        {
+            CardContainer temp = (CardContainer)this.MemberwiseClone();
+            Card[] tempCards = new Card[100];
+            for(int i = 0; i < count; i++)
+            {
+                tempCards[i] = cards[i].DeepCopy();
+            }
+            temp.cards = tempCards;
+            temp.count = this.count;
+            return temp;
+        }
+    }
+    class GameEngine
+    {
+        List<CardContainer[]> boardHistory = new List<CardContainer[]>();
+        List<CardContainer[]> deckHistory = new List<CardContainer[]>();
+        CardContainer[] board = new CardContainer[10];
+        CardContainer[] stock = new CardContainer[4];
+        public GameEngine()
+        {
+            board = new CardContainer[10];
+            stock = new CardContainer[4];
+            for (int i = 0; i < 10; i++) board[i] = new CardContainer();
+            for (int i = 0; i < 4; i++) stock[i] = new CardContainer();
+            ShuffleDecks();
+        }
+        public CardContainer[] GetBoard() { return board; }
+        public CardContainer[] GetStock() { return stock; }
+        public void ShuffleDecks()
+        {
+            Random rand = new Random();
+            List<int> randomCards = new List<int>();
+
+            while (randomCards.Count() < 52 * 2)
+            {
+                int x = rand.Next(1, 13 * 8 + 1);
+                if (!randomCards.Contains(x))
+                {
+                    randomCards.Add(x);
+                }
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                for (int y = 1; y <= 6; y++)
+                {
+                    int c = randomCards.Last();
+                    randomCards.Remove(randomCards.Last());
+                    Card t;
+                    if (y == 6) t = new Card((c / 13) % 4, c % 13, false, c);
+                    else t = new Card((c / 13) % 4, c % 13, true, c);
+                    board[i].AddCards(t);
+                }
+            }
+            for (int i = 4; i < 10; i++)
+            {
+                for (int y = 1; y <= 5; y++)
+                {
+                    int c = randomCards.Last();
+                    randomCards.Remove(randomCards.Last());
+                    Card t;
+                    if (y == 5) t = new Card((c / 13) % 4, c % 13, false, c);
+                    else t = new Card((c / 13) % 4, c % 13, true, c);
+                    board[i].AddCards(t);
+                }
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                for (int y = 1; y <= 10; y++)
+                {
+                    int c = randomCards.Last();
+                    randomCards.Remove(randomCards.Last());
+                    Card t = new Card((c / 13) % 4, c % 13, false, c);
+                    stock[i].AddCards(t);
+                }
+            }
+        }
+        public bool IsValidCardSelected(Coor select)
+        {
+            if (0 <= select.Col && select.Col < 10)
+            {
+                if (board[select.Col].GetCount() == 0 && select.Row == 0) return true;
+                if (0 <= select.Row && select.Row < board[select.Col].GetCount())
+                {
+                    return !board[select.Col].GetCardAtIndex(select.Row).IsHidden();
+                }
+            }
+            return false;
+        }
+        public bool MoveCards(Coor first, Coor second)
+        {
+            if (first.Col == second.Col) return false;
+
+            Card[] firstCards = board[first.Col].GetCardsFromIndex(first.Row);
+            int firstCount = board[first.Col].GetCountFromIndex(first.Row);
+
+            if (firstCards[0].GetRank() + 1 != board[second.Col].GetLastCard().GetRank()) return false;
+            for (int i = 0; i < firstCount - 1; i++)
+            {
+                if (firstCards[i].GetRank() != firstCards[i+1].GetRank() + 1) return false;
+                if (firstCards[i].GetSuit() != firstCards[i + 1].GetSuit()) return false;
+            }
+
+            CardContainer[] tempBoard = new CardContainer[10];
+            for(int i = 0; i < 10; i++)
+            {
+                tempBoard[i] = board[i].DeepCopy();
+            }
+            boardHistory.Add(tempBoard);
+            board[second.Col].AddCards(firstCards);
+            board[first.Col].RemoveCardsFromIndex(first.Row);
+            return true;
+        }
+        public bool ButtonPressed(Coor select)
+        {
+            if (select.Col == 0 && select.Row == 18)
+            {
+                UndoMove(ref board);
+                return true;
+            }
+            if (select.Col == 2 && select.Row == 18)
+            {
+                ShuffleDecks();
+                return true;
+            }
+            return false;
+        }
+        public void UndoMove(ref CardContainer[] board)
+        {
+            if (boardHistory.Count >= 1)
+            {
+                board = boardHistory.Last();
+                boardHistory.Remove(boardHistory.Last());
+            }
+        }
+        public void DrawBoard(Coor curSelect)
+        {
+            Console.Clear();
+            Coor brush = new Coor(0, 0);
+            for (int i = 0; i < 10; i++)
+            {
+                for (int j = 0; j < board[i].GetCount(); j++)
+                {
+                    Console.BackgroundColor = ConsoleColor.DarkGreen;
+                    Console.SetCursorPosition(brush.Col, brush.Row);
+                    int rank = board[i].GetCardAtIndex(j).GetRank();
+                    int suit = board[i].GetCardAtIndex(j).GetSuit();
+                    bool hidden = board[i].GetCardAtIndex(j).IsHidden();
+                    if (hidden)
+                    {
+                        Console.ForegroundColor = ConsoleColor.White;
+                        Console.Write("▓▓▓");
+                    }
+                    else
+                    {
+                        if (j == curSelect.Row && i == curSelect.Col) Console.BackgroundColor = ConsoleColor.DarkCyan;
+                        if (suit == 0 || suit == 1) Console.ForegroundColor = ConsoleColor.Red;
+                        else Console.ForegroundColor = ConsoleColor.White;
+                        Console.Write($"{Carddeck.ranks[rank],2}{Carddeck.suits[suit]}");
+                        Console.BackgroundColor = ConsoleColor.DarkGreen;
+                    }
+                    brush.Row++;
+                }
+                brush.Col += 4;
+                brush.Row = 0;
+            }
+            Console.SetCursorPosition(0, 18);
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.Write("UNDO");
+            Console.Write("    ");
+            Console.Write(" NEW");
+        }
     }
 }
