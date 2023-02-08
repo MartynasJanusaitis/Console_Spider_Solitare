@@ -43,7 +43,7 @@ namespace ConsoleSpiderSolitare
                 if (Control.MouseButtons.ToString() == "Left")
                 {
                     curSelect = m.GetCursorCoor();
-                    if (g.ButtonPressed(curSelect)) {}
+                    if (g.ButtonPressed(curSelect)) ;
                     else if (g.IsValidCardSelected(curSelect))
                     {
                         if (firstSelect == emptyCoor && secondSelect == emptyCoor)
@@ -62,10 +62,10 @@ namespace ConsoleSpiderSolitare
                         }
                     }
                     else firstSelect = emptyCoor;
+                    g.CheckForWinningDeck();
                     g.DrawBoard(firstSelect);
                     Thread.Sleep(120);
                 }
-
                 Thread.Sleep(10);
             }
         }
@@ -157,7 +157,6 @@ namespace ConsoleSpiderSolitare
             count = 0;
             cards = new Card[100];
         }
-
         public void AddCards(Card a) { cards[count++] = a; }
         public void AddCards(Card[] a)
         {
@@ -209,9 +208,10 @@ namespace ConsoleSpiderSolitare
     class GameEngine
     {
         List<CardContainer[]> boardHistory = new List<CardContainer[]>();
-        List<CardContainer[]> deckHistory = new List<CardContainer[]>();
+        List<int> stockHistory = new List<int>();
         CardContainer[] board = new CardContainer[10];
         CardContainer[] stock = new CardContainer[4];
+        int stockCount;
         public GameEngine()
         {
             board = new CardContainer[10];
@@ -222,19 +222,25 @@ namespace ConsoleSpiderSolitare
         }
         public CardContainer[] GetBoard() { return board; }
         public CardContainer[] GetStock() { return stock; }
-        public void ShuffleDecks()
+        public void ShuffleDecks(int cardVar = 1)
         {
+            board = new CardContainer[10];
+            stock = new CardContainer[5];
+            for (int i = 0; i < 10; i++) board[i] = new CardContainer();
+            for (int i = 0; i < 5; i++) stock[i] = new CardContainer();
+            stockCount = 5;
             Random rand = new Random();
             List<int> randomCards = new List<int>();
 
-            while (randomCards.Count() < 52 * 2)
+            while (randomCards.Count() < 104)
             {
-                int x = rand.Next(1, 13 * 8 + 1);
+                int x = rand.Next(0, 104);
                 if (!randomCards.Contains(x))
                 {
                     randomCards.Add(x);
                 }
             }
+            Console.SetCursorPosition(0, 0);
             for (int i = 0; i < 4; i++)
             {
                 for (int y = 1; y <= 6; y++)
@@ -242,8 +248,8 @@ namespace ConsoleSpiderSolitare
                     int c = randomCards.Last();
                     randomCards.Remove(randomCards.Last());
                     Card t;
-                    if (y == 6) t = new Card((c / 13) % 4, c % 13, false, c);
-                    else t = new Card((c / 13) % 4, c % 13, true, c);
+                    if (y == 6) t = new Card((c / 13) % cardVar, c % 13, false, c);
+                    else t = new Card((c / 13) % cardVar, c % 13, true, c);
                     board[i].AddCards(t);
                 }
             }
@@ -251,24 +257,35 @@ namespace ConsoleSpiderSolitare
             {
                 for (int y = 1; y <= 5; y++)
                 {
-                    int c = randomCards.Last();
-                    randomCards.Remove(randomCards.Last());
-                    Card t;
-                    if (y == 5) t = new Card((c / 13) % 4, c % 13, false, c);
-                    else t = new Card((c / 13) % 4, c % 13, true, c);
-                    board[i].AddCards(t);
+                    if(randomCards.Count() == 0)
+                    {
+                        Card t = new Card(0, 0, true, -1);
+                        board[i].AddCards(t);
+                    }
+                    else
+                    {
+                        int c = randomCards.Last();
+                        randomCards.Remove(randomCards.Last());
+                        Card t;
+                        if (y == 5) t = new Card((c / 13) % cardVar, c % 13, false, c);
+                        else t = new Card((c / 13) % cardVar, c % 13, true, c);
+                        board[i].AddCards(t);
+                    }
+
                 }
             }
-            for (int i = 0; i < 4; i++)
+            
+            for (int i = 0; i < 5; i++)
             {
                 for (int y = 1; y <= 10; y++)
                 {
                     int c = randomCards.Last();
                     randomCards.Remove(randomCards.Last());
-                    Card t = new Card((c / 13) % 4, c % 13, false, c);
+                    Card t = new Card((c / 13) % cardVar, c % 13, false, c);
                     stock[i].AddCards(t);
                 }
             }
+            Console.SetCursorPosition(0, 0);
         }
         public bool IsValidCardSelected(Coor select)
         {
@@ -285,48 +302,59 @@ namespace ConsoleSpiderSolitare
         public bool MoveCards(Coor first, Coor second)
         {
             if (first.Col == second.Col) return false;
+            if (board[first.Col].GetCount() == 0) return false;
 
             Card[] firstCards = board[first.Col].GetCardsFromIndex(first.Row);
             int firstCount = board[first.Col].GetCountFromIndex(first.Row);
 
-            if (firstCards[0].GetRank() + 1 != board[second.Col].GetLastCard().GetRank()) return false;
+            if (board[second.Col].GetCount() > 0)
+            {
+                if (firstCards[0].GetRank() + 1 != board[second.Col].GetLastCard().GetRank()) return false;
+            }
             for (int i = 0; i < firstCount - 1; i++)
             {
                 if (firstCards[i].GetRank() != firstCards[i+1].GetRank() + 1) return false;
                 if (firstCards[i].GetSuit() != firstCards[i + 1].GetSuit()) return false;
             }
 
-            CardContainer[] tempBoard = new CardContainer[10];
-            for(int i = 0; i < 10; i++)
-            {
-                tempBoard[i] = board[i].DeepCopy();
-            }
-            boardHistory.Add(tempBoard);
+            SaveBoardToHistory();
             board[second.Col].AddCards(firstCards);
             board[first.Col].RemoveCardsFromIndex(first.Row);
             return true;
         }
         public bool ButtonPressed(Coor select)
         {
-            if (select.Col == 0 && select.Row == 18)
+            if(select.Row == 18)
             {
-                UndoMove(ref board);
-                return true;
-            }
-            if (select.Col == 2 && select.Row == 18)
-            {
-                ShuffleDecks();
-                return true;
+                switch (select.Col)
+                {
+                    case 0:
+                        ShuffleDecks();
+                        return true;
+                    case 2:
+                        UndoMove(ref board);
+                        return true;
+                    case 4:
+                    case 6:
+                        DealFromStock();
+                        return true;
+                }
             }
             return false;
         }
         public void UndoMove(ref CardContainer[] board)
         {
-            if (boardHistory.Count >= 1)
+            if (stockHistory.Count >= 1)
             {
                 board = boardHistory.Last();
                 boardHistory.Remove(boardHistory.Last());
             }
+            if (stockHistory.Count >= 1)
+            {
+                stockCount = stockHistory.Last();
+                stockHistory.Remove(stockHistory.Last());
+            }
+
         }
         public void DrawBoard(Coor curSelect)
         {
@@ -361,9 +389,61 @@ namespace ConsoleSpiderSolitare
             }
             Console.SetCursorPosition(0, 18);
             Console.ForegroundColor = ConsoleColor.White;
+            Console.Write("NEW");
+            Console.Write("     ");
             Console.Write("UNDO");
-            Console.Write("    ");
-            Console.Write(" NEW");
+            Console.Write("     ");
+            Console.Write("STOCK X{0}", stockCount);
+        }
+        public void SaveBoardToHistory()
+        {
+            CardContainer[] tempBoard = new CardContainer[10];
+            for (int i = 0; i < 10; i++)
+            {
+                tempBoard[i] = board[i].DeepCopy();
+            }
+            boardHistory.Add(tempBoard);
+            stockHistory.Add(stockCount);
+        }
+        public bool DealFromStock()
+        {
+            if (stockCount > 0)
+            {
+                SaveBoardToHistory();
+                stockCount--;
+                for (int i = 0; i < 10; i++)
+                {
+                    board[i].AddCards(stock[stockCount].GetCardAtIndex(i));
+                }
+                return true;
+            }
+            else return false;
+        }
+        public void CheckForWinningDeck()
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                CardContainer cards = board[i];
+                if (cards.GetCount() < 13) continue;
+                int suit = cards.GetLastCard().GetSuit();
+                int foundIndx = -1;
+                for (int j = cards.GetCount() - 2; j >= 0; j--)
+                {
+                    Console.SetCursorPosition(0, 0);
+                    if (cards.GetCardAtIndex(j).GetRank() != cards.GetCardAtIndex(j + 1).GetRank() + 1 ||
+                        cards.GetCardAtIndex(j).GetSuit() != suit) break;
+                    else if (cards.GetCardAtIndex(j).GetRank() == 12)
+                    {
+                        foundIndx = j;
+                        break;
+                    }
+                }
+                if (foundIndx != -1)
+                {
+                    SaveBoardToHistory();
+                    board[i].RemoveCardsFromIndex(foundIndx);
+                }
+            }
         }
     }
 }
